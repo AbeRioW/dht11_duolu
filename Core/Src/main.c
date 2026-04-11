@@ -44,7 +44,13 @@
 /* Private variables ---------------------------------------------------------
 
 /* USER CODE BEGIN PV */
-uint8_t current_screen = 1; // 界面切换变量，1表示界面1，2表示界面2
+uint8_t current_screen = 1; // 界面切换变量，1表示界面1，2表示界面2，3表示界面3
+
+// 数据采集和存储
+#define MAX_DATA_POINTS 128 // 最大数据点数量
+uint8_t humidity_data[MAX_DATA_POINTS]; // 湿度数据
+uint8_t temperature_data[MAX_DATA_POINTS]; // 温度数据
+uint16_t data_index = 0; // 当前数据点索引
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,6 +114,15 @@ int main(void)
     DHT11_ReadData(DHT11_3_PORT, DHT11_3_PIN, &data3);
     DHT11_ReadData(DHT11_4_PORT, DHT11_4_PIN, &data4);
     
+    // 计算平均值
+    uint8_t avg_humidity = (data1.humidity + data2.humidity + data3.humidity + data4.humidity) / 4;
+    uint8_t avg_temperature = (data1.temperature + data2.temperature + data3.temperature + data4.temperature) / 4;
+    
+    // 存储数据
+    humidity_data[data_index] = avg_humidity;
+    temperature_data[data_index] = avg_temperature;
+    data_index = (data_index + 1) % MAX_DATA_POINTS;
+    
     // 显示数据到OLED
     OLED_Clear();
     
@@ -150,9 +165,6 @@ int main(void)
       OLED_ShowString(112, 48, (uint8_t*)"C", 8, 1);
     } else if (current_screen == 2) {
       // 界面2：显示DHT11的温湿度平均值
-      uint8_t avg_humidity = (data1.humidity + data2.humidity + data3.humidity + data4.humidity) / 4;
-      uint8_t avg_temperature = (data1.temperature + data2.temperature + data3.temperature + data4.temperature) / 4;
-      
       OLED_ShowString(0, 0, (uint8_t*)"Average:", 8, 1);
       OLED_ShowString(0, 24, (uint8_t*)"Humidity:", 8, 1);
       OLED_ShowNum(64, 24, avg_humidity, 2, 8, 1);
@@ -160,12 +172,43 @@ int main(void)
       OLED_ShowString(0, 48, (uint8_t*)"Temperature:", 8, 1);
       OLED_ShowNum(80, 48, avg_temperature, 2, 8, 1);
       OLED_ShowString(96, 48, (uint8_t*)"C", 8, 1);
+    } else if (current_screen == 3) {
+      // 界面3：显示平均值的走势图
+      OLED_ShowString(0, 0, (uint8_t*)"Trend Chart:", 8, 1);
+      
+      // 绘制湿度走势图
+      OLED_ShowString(0, 16, (uint8_t*)"Humidity:", 8, 1);
+      for (uint16_t i = 0; i < MAX_DATA_POINTS; i++) {
+        uint16_t x = i * 128 / MAX_DATA_POINTS;
+        uint16_t y = 32 - (humidity_data[(data_index + i) % MAX_DATA_POINTS] * 16 / 100);
+        if (i == 0) {
+          OLED_DrawPoint(x, y, 1);
+        } else {
+          uint16_t x_prev = (i - 1) * 128 / MAX_DATA_POINTS;
+          uint16_t y_prev = 32 - (humidity_data[(data_index + i - 1) % MAX_DATA_POINTS] * 16 / 100);
+          OLED_DrawLine(x_prev, y_prev, x, y, 1);
+        }
+      }
+      
+      // 绘制温度走势图
+      OLED_ShowString(0, 40, (uint8_t*)"Temperature:", 8, 1);
+      for (uint16_t i = 0; i < MAX_DATA_POINTS; i++) {
+        uint16_t x = i * 128 / MAX_DATA_POINTS;
+        uint16_t y = 56 - (temperature_data[(data_index + i) % MAX_DATA_POINTS] * 16 / 50);
+        if (i == 0) {
+          OLED_DrawPoint(x, y, 1);
+        } else {
+          uint16_t x_prev = (i - 1) * 128 / MAX_DATA_POINTS;
+          uint16_t y_prev = 56 - (temperature_data[(data_index + i - 1) % MAX_DATA_POINTS] * 16 / 50);
+          OLED_DrawLine(x_prev, y_prev, x, y, 1);
+        }
+      }
     }
     
     OLED_Refresh();
     HAL_Delay(1000); // 每2秒读取一次数据
   /* USER CODE END 3 */
-		}
+}
 	}
 
 /**
