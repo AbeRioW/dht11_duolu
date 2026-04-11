@@ -57,7 +57,7 @@
 /* External variables --------------------------------------------------------*/
 
 /* USER CODE BEGIN EV */
-
+extern uint8_t current_screen; // 外部声明界面切换变量
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -198,6 +198,39 @@ void SysTick_Handler(void)
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
 
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(KEY1_Pin);
+  HAL_GPIO_EXTI_IRQHandler(KEY2_Pin);
+  HAL_GPIO_EXTI_IRQHandler(KEY3_Pin);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief  EXTI line detection callbacks
+  * @param  GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == KEY1_Pin) {
+    // KEY1下降沿中断，切换界面
+    if (current_screen == 1) {
+      current_screen = 2;
+    } else {
+      current_screen = 1;
+    }
+  }
+}
 
 /* USER CODE END 1 */

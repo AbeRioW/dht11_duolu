@@ -61,6 +61,15 @@ void Error_Handler(void);
 #define OLED_SCL_GPIO_Port GPIOC
 #define OLED_SDA_Pin GPIO_PIN_14
 #define OLED_SDA_GPIO_Port GPIOC
+#define KEY1_Pin GPIO_PIN_12
+#define KEY1_GPIO_Port GPIOB
+#define KEY1_EXTI_IRQn EXTI15_10_IRQn
+#define KEY2_Pin GPIO_PIN_13
+#define KEY2_GPIO_Port GPIOB
+#define KEY2_EXTI_IRQn EXTI15_10_IRQn
+#define KEY3_Pin GPIO_PIN_14
+#define KEY3_GPIO_Port GPIOB
+#define KEY3_EXTI_IRQn EXTI15_10_IRQn
 #define DHT11_1_Pin GPIO_PIN_5
 #define DHT11_1_GPIO_Port GPIOB
 #define DHT11_2_Pin GPIO_PIN_6

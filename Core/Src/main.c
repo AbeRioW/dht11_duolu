@@ -41,10 +41,10 @@
 
 /* USER CODE END PM */
 
-/* Private variables ---------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------
 
 /* USER CODE BEGIN PV */
-
+uint8_t current_screen = 1; // 界面切换变量，1表示界面1，2表示界面2
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -111,48 +111,62 @@ int main(void)
     // 显示数据到OLED
     OLED_Clear();
     
-    // 显示DHT11_1的数据
-    OLED_ShowString(0, 0, (uint8_t*)"DHT11_1:", 8, 1);
-    OLED_ShowString(56, 0, (uint8_t*)"H:", 8, 1);
-    OLED_ShowNum(64, 0, data1.humidity, 2, 8, 1);
-    OLED_ShowString(80, 0, (uint8_t*)"%", 8, 1);
-    OLED_ShowString(88, 0, (uint8_t*)"T:", 8, 1);
-    OLED_ShowNum(96, 0, data1.temperature, 2, 8, 1);
-    OLED_ShowString(112, 0, (uint8_t*)"C", 8, 1);
-    
-    // 显示DHT11_2的数据
-    OLED_ShowString(0, 16, (uint8_t*)"DHT11_2:", 8, 1);
-    OLED_ShowString(56, 16, (uint8_t*)"H:", 8, 1);
-    OLED_ShowNum(64, 16, data2.humidity, 2, 8, 1);
-    OLED_ShowString(80, 16, (uint8_t*)"%", 8, 1);
-    OLED_ShowString(88, 16, (uint8_t*)"T:", 8, 1);
-    OLED_ShowNum(96, 16, data2.temperature, 2, 8, 1);
-    OLED_ShowString(112, 16, (uint8_t*)"C", 8, 1);
-    
-    // 显示DHT11_3的数据
-    OLED_ShowString(0, 32, (uint8_t*)"DHT11_3:", 8, 1);
-    OLED_ShowString(56, 32, (uint8_t*)"H:", 8, 1);
-    OLED_ShowNum(64, 32, data3.humidity, 2, 8, 1);
-    OLED_ShowString(80, 32, (uint8_t*)"%", 8, 1);
-    OLED_ShowString(88, 32, (uint8_t*)"T:", 8, 1);
-    OLED_ShowNum(96, 32, data3.temperature, 2, 8, 1);
-    OLED_ShowString(112, 32, (uint8_t*)"C", 8, 1);
-    
-    // 显示DHT11_4的数据
-    OLED_ShowString(0, 48, (uint8_t*)"DHT11_4:", 8, 1);
-    OLED_ShowString(56, 48, (uint8_t*)"H:", 8, 1);
-    OLED_ShowNum(64, 48, data4.humidity, 2, 8, 1);
-    OLED_ShowString(80, 48, (uint8_t*)"%", 8, 1);
-    OLED_ShowString(88, 48, (uint8_t*)"T:", 8, 1);
-    OLED_ShowNum(96, 48, data4.temperature, 2, 8, 1);
-    OLED_ShowString(112, 48, (uint8_t*)"C", 8, 1);
+    if (current_screen == 1) {
+      // 界面1：显示四个DHT11的原始数据
+      // 显示DHT11_1的数据
+      OLED_ShowString(0, 0, (uint8_t*)"DHT11_1:", 8, 1);
+      OLED_ShowString(56, 0, (uint8_t*)"H:", 8, 1);
+      OLED_ShowNum(64, 0, data1.humidity, 2, 8, 1);
+      OLED_ShowString(80, 0, (uint8_t*)"%", 8, 1);
+      OLED_ShowString(88, 0, (uint8_t*)"T:", 8, 1);
+      OLED_ShowNum(96, 0, data1.temperature, 2, 8, 1);
+      OLED_ShowString(112, 0, (uint8_t*)"C", 8, 1);
+      
+      // 显示DHT11_2的数据
+      OLED_ShowString(0, 16, (uint8_t*)"DHT11_2:", 8, 1);
+      OLED_ShowString(56, 16, (uint8_t*)"H:", 8, 1);
+      OLED_ShowNum(64, 16, data2.humidity, 2, 8, 1);
+      OLED_ShowString(80, 16, (uint8_t*)"%", 8, 1);
+      OLED_ShowString(88, 16, (uint8_t*)"T:", 8, 1);
+      OLED_ShowNum(96, 16, data2.temperature, 2, 8, 1);
+      OLED_ShowString(112, 16, (uint8_t*)"C", 8, 1);
+      
+      // 显示DHT11_3的数据
+      OLED_ShowString(0, 32, (uint8_t*)"DHT11_3:", 8, 1);
+      OLED_ShowString(56, 32, (uint8_t*)"H:", 8, 1);
+      OLED_ShowNum(64, 32, data3.humidity, 2, 8, 1);
+      OLED_ShowString(80, 32, (uint8_t*)"%", 8, 1);
+      OLED_ShowString(88, 32, (uint8_t*)"T:", 8, 1);
+      OLED_ShowNum(96, 32, data3.temperature, 2, 8, 1);
+      OLED_ShowString(112, 32, (uint8_t*)"C", 8, 1);
+      
+      // 显示DHT11_4的数据
+      OLED_ShowString(0, 48, (uint8_t*)"DHT11_4:", 8, 1);
+      OLED_ShowString(56, 48, (uint8_t*)"H:", 8, 1);
+      OLED_ShowNum(64, 48, data4.humidity, 2, 8, 1);
+      OLED_ShowString(80, 48, (uint8_t*)"%", 8, 1);
+      OLED_ShowString(88, 48, (uint8_t*)"T:", 8, 1);
+      OLED_ShowNum(96, 48, data4.temperature, 2, 8, 1);
+      OLED_ShowString(112, 48, (uint8_t*)"C", 8, 1);
+    } else if (current_screen == 2) {
+      // 界面2：显示DHT11的温湿度平均值
+      uint8_t avg_humidity = (data1.humidity + data2.humidity + data3.humidity + data4.humidity) / 4;
+      uint8_t avg_temperature = (data1.temperature + data2.temperature + data3.temperature + data4.temperature) / 4;
+      
+      OLED_ShowString(0, 0, (uint8_t*)"Average:", 8, 1);
+      OLED_ShowString(0, 24, (uint8_t*)"Humidity:", 8, 1);
+      OLED_ShowNum(64, 24, avg_humidity, 2, 8, 1);
+      OLED_ShowString(80, 24, (uint8_t*)"%", 8, 1);
+      OLED_ShowString(0, 48, (uint8_t*)"Temperature:", 8, 1);
+      OLED_ShowNum(80, 48, avg_temperature, 2, 8, 1);
+      OLED_ShowString(96, 48, (uint8_t*)"C", 8, 1);
+    }
     
     OLED_Refresh();
     HAL_Delay(1000); // 每2秒读取一次数据
-    /* USER CODE END 3 */
+  /* USER CODE END 3 */
+		}
 	}
-
-}
 
 /**
   * @brief System Clock Configuration
