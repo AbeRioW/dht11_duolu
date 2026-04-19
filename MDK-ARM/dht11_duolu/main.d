@@ -34,3 +34,4 @@ dht11_duolu\main.o: ../App/dht11.h
 dht11_duolu\main.o: ../App/esp8266.h
 dht11_duolu\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
 dht11_duolu\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+dht11_duolu\main.o: ../App/mqtt_publisher.h

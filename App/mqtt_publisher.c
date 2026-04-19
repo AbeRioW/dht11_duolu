@@ -78,13 +78,13 @@ void MQTT_Publish_time_set(const char* value)
 // 发布time_set标识符
 void MQTT_Publish_temp(const char* value)
 {
-    MQTT_Publish_Data("temperature", value);
+    MQTT_Publish_Data("temperature1", value);
 }
 
 // 发布time_set标识符
 void MQTT_Publish_humidity(const char* value)
 {
-    MQTT_Publish_Data("humidity", value);
+    MQTT_Publish_Data("humidity1", value);
 }
 
 void MQTT_Publish_co2(const char* value)

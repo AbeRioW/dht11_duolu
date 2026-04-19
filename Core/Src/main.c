@@ -27,6 +27,7 @@
 #include "oled.h"
 #include "dht11.h"
 #include "esp8266.h"
+#include "mqtt_publisher.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -192,7 +193,7 @@ int main(void)
     DHT11_ReadData(DHT11_2_PORT, DHT11_2_PIN, &data2);
     DHT11_ReadData(DHT11_3_PORT, DHT11_3_PIN, &data3);
     DHT11_ReadData(DHT11_4_PORT, DHT11_4_PIN, &data4);
-    
+
     // 应用数据滤波
     filtered_data1.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 0, data1.humidity);
     filtered_data1.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 0, data1.temperature);
@@ -215,7 +216,11 @@ int main(void)
     // 计算平均值（使用滤波后的数据）
     uint8_t avg_humidity = (filtered_data1.humidity + filtered_data2.humidity + filtered_data3.humidity + filtered_data4.humidity) / 4;
     uint8_t avg_temperature = (filtered_data1.temperature + filtered_data2.temperature + filtered_data3.temperature + filtered_data4.temperature) / 4;
-    
+		    char temp_buf[16];
+            sprintf(temp_buf, "%d.%d", avg_temperature, 0);
+        MQTT_Publish_temp(temp_buf);
+					  sprintf(temp_buf, "%d.%d", avg_humidity, 0);
+        MQTT_Publish_humidity(temp_buf);
     // 根据阈值控制LED
     // DHT11_1温度或湿度高于阈值，LED1拉低（点亮），否则拉高（熄灭）
     if (filtered_data1.temperature > temp_threshold || filtered_data1.humidity > humi_threshold) {
