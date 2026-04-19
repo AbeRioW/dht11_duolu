@@ -41,7 +41,7 @@
 
 /* USER CODE END PM */
 
-/* Private variables ---------------------------------------------------------
+/* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 uint8_t current_screen = 1; // 界面切换变量，1表示界面1（主界面），2表示界面2（平均值界面），3表示设置界面
@@ -184,6 +184,35 @@ int main(void)
     uint8_t avg_humidity = (filtered_data1.humidity + filtered_data2.humidity + filtered_data3.humidity + filtered_data4.humidity) / 4;
     uint8_t avg_temperature = (filtered_data1.temperature + filtered_data2.temperature + filtered_data3.temperature + filtered_data4.temperature) / 4;
     
+    // 根据阈值控制LED
+    // DHT11_1温度或湿度高于阈值，LED1拉低（点亮），否则拉高（熄灭）
+    if (filtered_data1.temperature > temp_threshold || filtered_data1.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // DHT11_2温度或湿度高于阈值，LED2拉低（点亮），否则拉高（熄灭）
+    if (filtered_data2.temperature > temp_threshold || filtered_data2.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // DHT11_3温度或湿度高于阈值，LED3拉低（点亮），否则拉高（熄灭）
+    if (filtered_data3.temperature > temp_threshold || filtered_data3.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // DHT11_4温度或湿度高于阈值，LED4拉低（点亮），否则拉高（熄灭）
+    if (filtered_data4.temperature > temp_threshold || filtered_data4.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
     // 存储数据
     humidity_data[data_index] = avg_humidity;
     temperature_data[data_index] = avg_temperature;
@@ -288,8 +317,8 @@ int main(void)
     OLED_Refresh();
     HAL_Delay(1000); // 每2秒读取一次数据
   /* USER CODE END 3 */
-}
 	}
+}
 
 /**
   * @brief System Clock Configuration
@@ -337,12 +366,13 @@ uint8_t moving_average_filter(uint8_t* buffer, uint8_t sensor_index, uint8_t new
 {
     uint16_t sum = 0;
     
-    // 更新滤波缓冲区
-    buffer[filter_index * 4 + sensor_index] = new_value;
+    // 更新滤波缓冲区（正确使用二维数组索引）
+    uint8_t (*filter_buf)[4] = (uint8_t(*)[4])buffer;
+    filter_buf[filter_index][sensor_index] = new_value;
     
     // 计算平均值
     for (uint8_t i = 0; i < FILTER_WINDOW_SIZE; i++) {
-        sum += buffer[i * 4 + sensor_index];
+        sum += filter_buf[i][sensor_index];
     }
     
     return (uint8_t)(sum / FILTER_WINDOW_SIZE);
