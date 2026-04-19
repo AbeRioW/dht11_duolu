@@ -18,12 +18,15 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "oled.h"
 #include "dht11.h"
+#include "esp8266.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -103,7 +106,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  uint8_t wifi_try = 0, mqtt_try = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -124,6 +127,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_Clear();
@@ -142,7 +147,34 @@ int main(void)
   // 清屏并进入主循环
   OLED_Clear();
   OLED_Refresh();
-  
+  	ESP8266_Init();
+		  //WIFI连接
+   while (wifi_try < 5 && !ESP8266_ConnectWiFi())
+  {
+      wifi_try++;
+      HAL_Delay(1000);
+  }
+	
+	  //上云
+	if(ESP8266_ConnectCloud()==false)
+	{
+		  while(1);
+	}
+	HAL_Delay(5000);
+	ESP8266_Clear();
+	OLED_Clear();
+	
+	//订阅
+	if(!ESP8266_MQTT_Subscribe(MQTT_TOPIC_POST_REPLY,1))
+	{
+		  while(1);
+	}
+	
+	//发布
+		if(!ESP8266_MQTT_Subscribe(MQTT_TOPIC_SET,0))
+	{
+		  while(1);
+	}
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -330,8 +362,8 @@ int main(void)
     OLED_Refresh();
     HAL_Delay(1000); // 每2秒读取一次数据
   /* USER CODE END 3 */
-	}
 }
+	}
 
 /**
   * @brief System Clock Configuration

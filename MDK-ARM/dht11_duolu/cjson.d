@@ -1,0 +1,10 @@
+dht11_duolu\cjson.o: ..\App\cJSON.c
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\limits.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\ctype.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\float.h
+dht11_duolu\cjson.o: ..\App\cJSON.h
+dht11_duolu\cjson.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
