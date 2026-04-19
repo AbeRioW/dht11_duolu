@@ -25,13 +25,6 @@ dht11_duolu\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
 dht11_duolu\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 dht11_duolu\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 dht11_duolu\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
-dht11_duolu\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
-dht11_duolu\main.o: ../Core/Inc/dma.h
-dht11_duolu\main.o: ../Core/Inc/usart.h
 dht11_duolu\main.o: ../Core/Inc/gpio.h
 dht11_duolu\main.o: ../App/oled.h
 dht11_duolu\main.o: ../App/dht11.h
-dht11_duolu\main.o: ../App/esp8266.h
-dht11_duolu\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
-dht11_duolu\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
-dht11_duolu\main.o: ../App/mqtt_publisher.h

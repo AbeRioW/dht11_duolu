@@ -18,16 +18,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "dma.h"
-#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "oled.h"
 #include "dht11.h"
-#include "esp8266.h"
-#include "mqtt_publisher.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -107,7 +103,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  uint8_t wifi_try = 0, mqtt_try = 0;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -128,8 +124,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_Clear();
@@ -148,135 +142,86 @@ int main(void)
   // 清屏并进入主循环
   OLED_Clear();
   OLED_Refresh();
-  	ESP8266_Init();
-		  while (wifi_try < 5 && !ESP8266_ConnectWiFi())
-  {
-      wifi_try++;
-      HAL_Delay(1000);
-  }
-	
-	  //上云
-	if(ESP8266_ConnectCloud()==false)
-	{
-		  while(1);
-	}
-	HAL_Delay(5000);
-	ESP8266_Clear();
-	OLED_Clear();
-	
-	//订阅
-	if(!ESP8266_MQTT_Subscribe(MQTT_TOPIC_POST_REPLY,1))
-	{
-		  while(1);
-	}
-	
-	//发布
-		if(!ESP8266_MQTT_Subscribe(MQTT_TOPIC_SET,0))
-	{
-		  while(1);
-	}
-	
-	// 初始化MQTT发布状态机
-	MQTT_Init();
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  
-  // 主循环状态机变量
-  static uint8_t loop_state = 0; // 0: DHT11读取, 1: 数据处理, 2: MQTT处理
-  static uint32_t last_dht11_read = 0;
-  static DHT11_Data data1, data2, data3, data4;
-  static DHT11_Data filtered_data1, filtered_data2, filtered_data3, filtered_data4;
-  static uint8_t avg_humidity = 0, avg_temperature = 0;
-  
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    DHT11_Data data1, data2, data3, data4;
+    DHT11_Data filtered_data1, filtered_data2, filtered_data3, filtered_data4;
     
-    // 状态机：分离DHT11读取和MQTT处理
-    switch (loop_state) {
-        case 0: // DHT11读取状态
-            {
-                uint32_t now = HAL_GetTick();
-                // 每2秒读取一次DHT11数据
-                if ((uint32_t)(now - last_dht11_read) >= 2000) {
-                    // 读取四个DHT11的温湿度数据（禁用中断保护时序）
-                    DHT11_ReadData(DHT11_1_PORT, DHT11_1_PIN, &data1);
-                    DHT11_ReadData(DHT11_2_PORT, DHT11_2_PIN, &data2);
-                    DHT11_ReadData(DHT11_3_PORT, DHT11_3_PIN, &data3);
-                    DHT11_ReadData(DHT11_4_PORT, DHT11_4_PIN, &data4);
-                    
-                    last_dht11_read = now;
-                    loop_state = 1; // 切换到数据处理状态
-                }
-                break;
-            }
-        case 1: // 数据处理状态
-            {
-                // 应用数据滤波
-                filtered_data1.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 0, data1.humidity);
-                filtered_data1.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 0, data1.temperature);
-                
-                filtered_data2.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 1, data2.humidity);
-                filtered_data2.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 1, data2.temperature);
-                
-                filtered_data3.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 2, data3.humidity);
-                filtered_data3.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 2, data3.temperature);
-                
-                filtered_data4.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 3, data4.humidity);
-                filtered_data4.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 3, data4.temperature);
-                
-                // 更新滤波索引
-                filter_index = (filter_index + 1) % FILTER_WINDOW_SIZE;
-                if (filter_index == 0) {
-                    filter_ready = 1; // 滤波缓冲区已填满
-                }
-                
-                // 计算平均值（使用滤波后的数据）
-                avg_humidity = (filtered_data1.humidity + filtered_data2.humidity + filtered_data3.humidity + filtered_data4.humidity) / 4;
-                avg_temperature = (filtered_data1.temperature + filtered_data2.temperature + filtered_data3.temperature + filtered_data4.temperature) / 4;
-                
-                // 根据阈值控制LED
-                // DHT11_1温度或湿度高于阈值，LED1拉低（点亮），否则拉高（熄灭）
-                if (filtered_data1.temperature > temp_threshold || filtered_data1.humidity > humi_threshold) {
-                    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
-                } else {
-                    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
-                }
-                
-                // DHT11_2温度或湿度高于阈值，LED2拉低（点亮），否则拉高（熄灭）
-                if (filtered_data2.temperature > temp_threshold || filtered_data2.humidity > humi_threshold) {
-                    HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
-                } else {
-                    HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
-                }
-                
-                // DHT11_3温度或湿度高于阈值，LED3拉低（点亮），否则拉高（熄灭）
-                if (filtered_data3.temperature > temp_threshold || filtered_data3.humidity > humi_threshold) {
-                    HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
-                } else {
-                    HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
-                }
-                
-                // DHT11_4温度或湿度高于阈值，LED4拉低（点亮），否则拉高（熄灭）
-                if (filtered_data4.temperature > temp_threshold || filtered_data4.humidity > humi_threshold) {
-                    HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
-                } else {
-                    HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
-                }
-                
-                // 存储数据
-                humidity_data[data_index] = avg_humidity;
-                temperature_data[data_index] = avg_temperature;
-                data_index = (data_index + 1) % MAX_DATA_POINTS;
-                
-                // 在平均值界面控制蜂鸣器
-                if (current_screen == 2) {
-                    // 平均值界面：温度或湿度平均值超过阈值，拉低BEEP工作（蜂鸣），否则拉高BEEP（静音）
-                    if (avg_temperature > temp_threshold || avg_humidity > humi_threshold) {
+    // 读取四个DHT11的温湿度数据
+    DHT11_ReadData(DHT11_1_PORT, DHT11_1_PIN, &data1);
+    DHT11_ReadData(DHT11_2_PORT, DHT11_2_PIN, &data2);
+    DHT11_ReadData(DHT11_3_PORT, DHT11_3_PIN, &data3);
+    DHT11_ReadData(DHT11_4_PORT, DHT11_4_PIN, &data4);
+    
+    // 应用数据滤波
+    filtered_data1.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 0, data1.humidity);
+    filtered_data1.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 0, data1.temperature);
+    
+    filtered_data2.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 1, data2.humidity);
+    filtered_data2.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 1, data2.temperature);
+    
+    filtered_data3.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 2, data3.humidity);
+    filtered_data3.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 2, data3.temperature);
+    
+    filtered_data4.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 3, data4.humidity);
+    filtered_data4.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 3, data4.temperature);
+    
+    // 更新滤波索引
+    filter_index = (filter_index + 1) % FILTER_WINDOW_SIZE;
+    if (filter_index == 0) {
+        filter_ready = 1; // 滤波缓冲区已填满
+    }
+    
+    // 计算平均值（使用滤波后的数据）
+    uint8_t avg_humidity = (filtered_data1.humidity + filtered_data2.humidity + filtered_data3.humidity + filtered_data4.humidity) / 4;
+    uint8_t avg_temperature = (filtered_data1.temperature + filtered_data2.temperature + filtered_data3.temperature + filtered_data4.temperature) / 4;
+    
+    // 根据阈值控制LED
+    // DHT11_1温度或湿度高于阈值，LED1拉低（点亮），否则拉高（熄灭）
+    if (filtered_data1.temperature > temp_threshold || filtered_data1.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // DHT11_2温度或湿度高于阈值，LED2拉低（点亮），否则拉高（熄灭）
+    if (filtered_data2.temperature > temp_threshold || filtered_data2.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // DHT11_3温度或湿度高于阈值，LED3拉低（点亮），否则拉高（熄灭）
+    if (filtered_data3.temperature > temp_threshold || filtered_data3.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // DHT11_4温度或湿度高于阈值，LED4拉低（点亮），否则拉高（熄灭）
+    if (filtered_data4.temperature > temp_threshold || filtered_data4.humidity > humi_threshold) {
+        HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET); // 拉低，点亮LED
+    } else {
+        HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);   // 拉高，熄灭LED
+    }
+    
+    // 存储数据
+    humidity_data[data_index] = avg_humidity;
+    temperature_data[data_index] = avg_temperature;
+    data_index = (data_index + 1) % MAX_DATA_POINTS;
+    
+    // 在平均值界面控制蜂鸣器
+    if (current_screen == 2) {
+        // 平均值界面：温度或湿度平均值超过阈值，拉低BEEP工作（蜂鸣），否则拉高BEEP（静音）
+        if (avg_temperature > temp_threshold || avg_humidity > humi_threshold) {
             HAL_GPIO_WritePin(BEEP_GPIO_Port, BEEP_Pin, GPIO_PIN_RESET); // 拉低，蜂鸣器工作
         } else {
             HAL_GPIO_WritePin(BEEP_GPIO_Port, BEEP_Pin, GPIO_PIN_SET);   // 拉高，蜂鸣器静音
@@ -285,21 +230,6 @@ int main(void)
         // 其他界面：蜂鸣器静音
         HAL_GPIO_WritePin(BEEP_GPIO_Port, BEEP_Pin, GPIO_PIN_SET);
     }
-    
-    // 通过MQTT发布DHT11传感器数据（发布温度平均值）
-    char avg_temp_str[8], avg_humi_str[4];
-    
-    // 计算平均值（使用滤波后的数据）
-    avg_humidity = (filtered_data1.humidity + filtered_data2.humidity + filtered_data3.humidity + filtered_data4.humidity) / 4;
-    avg_temperature = (filtered_data1.temperature + filtered_data2.temperature + filtered_data3.temperature + filtered_data4.temperature) / 4;
-    
-    // 将平均值转换为字符串（使用%d.%d格式）
-    snprintf(avg_temp_str, sizeof(avg_temp_str), "%d.%d", avg_temperature, 0);
-    snprintf(avg_humi_str, sizeof(avg_humi_str), "%d.%d", avg_humidity,0);
-    
-    // 准备MQTT数据（非阻塞方式）
-    MQTT_Prepare_Data("temperature1", avg_temp_str);
-    MQTT_Prepare_Data("humidity1", avg_humi_str);
     
     // 显示数据到OLED
     OLED_Clear();
@@ -398,10 +328,6 @@ int main(void)
     }
     
     OLED_Refresh();
-    
-    // 处理MQTT发布状态机（非阻塞）
-    MQTT_Process();
-    
     HAL_Delay(1000); // 每2秒读取一次数据
   /* USER CODE END 3 */
 	}

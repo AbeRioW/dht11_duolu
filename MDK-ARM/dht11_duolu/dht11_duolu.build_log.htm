@@ -27,40 +27,37 @@ Project File Date:  04/19/2026
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 6 (build 750)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'dht11_duolu'
+assembling startup_stm32f103xb.s...
+compiling gpio.c...
+compiling stm32f1xx_hal_gpio_ex.c...
+compiling stm32f1xx_it.c...
+compiling stm32f1xx_hal_msp.c...
 compiling main.c...
 ../App/dht11.h(29): warning:  #1-D: last line of file ends without a newline
   #endif
-../App/esp8266.h(54): warning:  #1-D: last line of file ends without a newline
-  #endif /* __ESP8266_H */
-../Core/Src/main.c(297): warning:  #223-D: function "snprintf" declared implicitly
-      snprintf(avg_temp_str, sizeof(avg_temp_str), "%d.%d", avg_temperature, 0);
-../Core/Src/main.c(415): error:  #65: expected a ";"
-  {
-../Core/Src/main.c(437): warning:  #12-D: parsing restarts here after previous syntax error
-                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-../Core/Src/main.c(438): error:  #20: identifier "RCC_ClkInitStruct" is undefined
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-../Core/Src/main.c(453): error:  #65: expected a ";"
-  {
-../Core/Src/main.c(493): warning:  #12-D: parsing restarts here after previous syntax error
-          uint32_t *data_ptr = (uint32_t*)&threshold_data;
-../Core/Src/main.c(495): error:  #20: identifier "data_ptr" is undefined
-              HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_THRESHOLD_ADDR + i * 4, data_ptr[i]);
-../Core/Src/main.c(494): warning:  #128-D: loop is not reachable
-          for (uint8_t i = 0; i < sizeof(ThresholdData_t) / 4; i++) {
-../Core/Src/main.c(110): warning:  #177-D: variable "mqtt_try"  was declared but never referenced
-    uint8_t wifi_try = 0, mqtt_try = 0;
-../Core/Src/main.c(500): warning:  #1295-D: Deprecated declaration HAL_FLASH_Lock - give arg types
-      HAL_FLASH_Lock();
-../Core/Src/main.c(500): error:  #260-D: explicit type is missing ("int" assumed)
-      HAL_FLASH_Lock();
-../Core/Src/main.c(500): error:  #147: declaration is incompatible with "HAL_StatusTypeDef HAL_FLASH_Lock(void)"  (declared at line 275 of "../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h")
-      HAL_FLASH_Lock();
-../Core/Src/main.c(501): error:  #169: expected a declaration
+../Core/Src/main.c: 1 warning, 0 errors
+compiling stm32f1xx_hal_rcc_ex.c...
+compiling stm32f1xx_hal.c...
+compiling stm32f1xx_hal_cortex.c...
+compiling stm32f1xx_hal_gpio.c...
+compiling stm32f1xx_hal_dma.c...
+compiling stm32f1xx_hal_rcc.c...
+compiling stm32f1xx_hal_pwr.c...
+compiling stm32f1xx_hal_flash.c...
+compiling stm32f1xx_hal_exti.c...
+compiling system_stm32f1xx.c...
+compiling dht11.c...
+..\App\dht11.h(29): warning:  #1-D: last line of file ends without a newline
+  #endif
+..\App\dht11.c(113): warning:  #1-D: last line of file ends without a newline
   }
-../Core/Src/main.c(546): warning: At end of source:  #12-D: parsing restarts here after previous syntax error
-../Core/Src/main.c: 9 warnings, 7 errors
-"dht11_duolu\dht11_duolu.axf" - 7 Error(s), 9 Warning(s).
+..\App\dht11.c: 2 warnings, 0 errors
+compiling stm32f1xx_hal_flash_ex.c...
+compiling oled.c...
+linking...
+Program Size: Code=7276 RO-data=6936 RW-data=24 ZI-data=3112  
+FromELF: creating hex file...
+"dht11_duolu\dht11_duolu.axf" - 0 Error(s), 3 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -84,8 +81,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE:5.6.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Target not created.
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:03
 </pre>
 </body>
 </html>
