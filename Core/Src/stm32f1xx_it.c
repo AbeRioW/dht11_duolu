@@ -58,6 +58,10 @@
 
 /* USER CODE BEGIN EV */
 extern uint8_t current_screen; // 外部声明界面切换变量
+extern uint8_t temp_threshold; // 外部声明温度阈值
+extern uint8_t humi_threshold; // 外部声明湿度阈值
+extern uint8_t setting_mode;   // 外部声明设置模式
+extern void save_thresholds_to_flash(void); // 外部声明Flash保存函数
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -224,18 +228,52 @@ void EXTI15_10_IRQHandler(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == KEY1_Pin) {
-    // KEY1下降沿中断，在平均值界面（界面2）和主界面（界面1）之间切换
-    // 欢迎界面（界面0）时不进行切换
-    if (current_screen == 1) {
-      // 当前在主界面，切换到平均值界面
-      current_screen = 2;
-    } else if (current_screen == 2) {
-      // 当前在平均值界面，切换回主界面
-      current_screen = 1;
+    if (current_screen == 3) {
+      // 设置界面中：KEY1用于减少阈值
+      if (setting_mode == 0) {
+        // 温度阈值减少（范围0-40）
+        if (temp_threshold > 0) temp_threshold--;
+      } else if (setting_mode == 1) {
+        // 湿度阈值减少（范围0-99）
+        if (humi_threshold > 0) humi_threshold--;
+      }
+    } else {
+      // 其他界面：KEY1在平均值界面（界面2）和主界面（界面1）之间切换
+      if (current_screen == 1) {
+        current_screen = 2;
+      } else if (current_screen == 2) {
+        current_screen = 1;
+      }
     }
-    // 其他界面（包括欢迎界面）保持不变
+  } else if (GPIO_Pin == KEY2_Pin) {
+    if (current_screen == 3) {
+      // 设置界面中：KEY2用于切换设置模式
+      setting_mode = (setting_mode + 1) % 3;
+      
+      // 如果切换到保存返回模式，保存阈值到Flash并返回主界面
+      if (setting_mode == 2) {
+        save_thresholds_to_flash();
+        current_screen = 1;
+        setting_mode = 0;
+      }
+    } else {
+      // 其他界面：KEY2进入设置界面（界面3）
+      current_screen = 3;
+      setting_mode = 0; // 重置为温度阈值设置模式
+    }
+  } else if (GPIO_Pin == KEY3_Pin) {
+    if (current_screen == 3) {
+      // 设置界面中：KEY3用于增加阈值
+      if (setting_mode == 0) {
+        // 温度阈值增加（范围0-40）
+        if (temp_threshold < 40) temp_threshold++;
+      } else if (setting_mode == 1) {
+        // 湿度阈值增加（范围0-99）
+        if (humi_threshold < 99) humi_threshold++;
+      }
+    }
+    // 其他界面中KEY3保持原有功能
   }
-  // KEY2和KEY3不进行界面切换，保持原有功能
 }
 
 /* USER CODE END 1 */

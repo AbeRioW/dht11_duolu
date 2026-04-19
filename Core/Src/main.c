@@ -44,7 +44,7 @@
 /* Private variables ---------------------------------------------------------
 
 /* USER CODE BEGIN PV */
-uint8_t current_screen = 1; // 界面切换变量，1表示界面1（主界面），2表示界面2（平均值界面）
+uint8_t current_screen = 1; // 界面切换变量，1表示界面1（主界面），2表示界面2（平均值界面），3表示设置界面
 
 // 数据采集和存储
 #define MAX_DATA_POINTS 128 // 最大数据点数量
@@ -58,6 +58,23 @@ uint8_t humidity_filter_buf[FILTER_WINDOW_SIZE][4]; // 4个传感器的湿度滤
 uint8_t temperature_filter_buf[FILTER_WINDOW_SIZE][4]; // 4个传感器的温度滤波缓冲区
 uint8_t filter_index = 0; // 滤波缓冲区索引
 uint8_t filter_ready = 0; // 滤波是否就绪标志
+
+// 阈值设置相关变量
+uint8_t temp_threshold = 25; // 温度阈值（默认25°C，范围0-40）
+uint8_t humi_threshold = 60; // 湿度阈值（默认60%，范围0-99）
+uint8_t setting_mode = 0; // 设置模式：0-温度阈值，1-湿度阈值，2-保存返回
+
+// Flash存储相关定义
+#define FLASH_THRESHOLD_ADDR 0x0800FC00 // Flash存储地址（最后一页）
+#define FLASH_MAGIC_NUMBER 0xAA55 // 魔数用于验证数据有效性
+
+// 阈值数据结构
+typedef struct {
+    uint16_t magic;        // 魔数
+    uint8_t temp_threshold; // 温度阈值
+    uint8_t humi_threshold; // 湿度阈值
+    uint8_t reserved[2];   // 保留字节
+} ThresholdData_t;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,6 +83,10 @@ void SystemClock_Config(void);
 
 // 数据滤波函数
 uint8_t moving_average_filter(uint8_t* buffer, uint8_t sensor_index, uint8_t new_value);
+
+// Flash存储函数
+void save_thresholds_to_flash(void);
+void load_thresholds_from_flash(void);
 
 /* USER CODE END PFP */
 
@@ -106,6 +127,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_Clear();
+  
+  // 从Flash加载阈值设置
+  load_thresholds_from_flash();
   
   // 显示欢迎界面2秒
   OLED_ShowString(20, 0, (uint8_t*)"Welcome", 16, 1);
@@ -214,6 +238,51 @@ int main(void)
       OLED_ShowString(0, 48, (uint8_t*)"Temperature:", 8, 1);
       OLED_ShowNum(80, 48, avg_temperature, 2, 8, 1);
       OLED_ShowString(96, 48, (uint8_t*)"C", 8, 1);
+    } else if (current_screen == 3) {
+      // 界面3：设置界面（温湿度阈值在同一页面）
+      OLED_ShowString(0, 0, (uint8_t*)"Settings:", 8, 1);
+      
+      if (setting_mode == 0) {
+        // 温度阈值设置模式
+        OLED_ShowString(0, 16, (uint8_t*)"Temp:", 8, 1);
+        OLED_ShowNum(40, 16, temp_threshold, 2, 8, 1);
+        OLED_ShowString(56, 16, (uint8_t*)"C", 8, 1);
+        OLED_ShowString(80, 16, (uint8_t*)"<-", 8, 1);
+        
+        OLED_ShowString(0, 32, (uint8_t*)"Humi:", 8, 1);
+        OLED_ShowNum(40, 32, humi_threshold, 2, 8, 1);
+        OLED_ShowString(56, 32, (uint8_t*)"%", 8, 1);
+        
+        OLED_ShowString(0, 48, (uint8_t*)"KEY1:- KEY3:+ KEY2:OK", 8, 1);
+      } else if (setting_mode == 1) {
+        // 湿度阈值设置模式
+        OLED_ShowString(0, 16, (uint8_t*)"Temp:", 8, 1);
+        OLED_ShowNum(40, 16, temp_threshold, 2, 8, 1);
+        OLED_ShowString(56, 16, (uint8_t*)"C", 8, 1);
+        
+        OLED_ShowString(0, 32, (uint8_t*)"Humi:", 8, 1);
+        OLED_ShowNum(40, 32, humi_threshold, 2, 8, 1);
+        OLED_ShowString(56, 32, (uint8_t*)"%", 8, 1);
+        OLED_ShowString(80, 32, (uint8_t*)"<-", 8, 1);
+        
+        OLED_ShowString(0, 48, (uint8_t*)"KEY1:- KEY3:+ KEY2:OK", 8, 1);
+      } else {
+        // 保存并返回模式
+        OLED_ShowString(0, 0, (uint8_t*)"Settings:", 8, 1);
+        OLED_ShowString(0, 16, (uint8_t*)"Temp:", 8, 1);
+        OLED_ShowNum(40, 16, temp_threshold, 2, 8, 1);
+        OLED_ShowString(56, 16, (uint8_t*)"C", 8, 1);
+        
+        OLED_ShowString(0, 32, (uint8_t*)"Humi:", 8, 1);
+        OLED_ShowNum(40, 32, humi_threshold, 2, 8, 1);
+        OLED_ShowString(56, 32, (uint8_t*)"%", 8, 1);
+        
+        OLED_ShowString(0, 48, (uint8_t*)"Press KEY2 to Save", 8, 1);
+      }
+      
+      // 显示当前设置模式指示器
+      OLED_ShowString(104, 0, (uint8_t*)"M:", 8, 1);
+      OLED_ShowNum(120, 0, setting_mode, 1, 8, 1);
     }
     
     OLED_Refresh();
@@ -277,6 +346,53 @@ uint8_t moving_average_filter(uint8_t* buffer, uint8_t sensor_index, uint8_t new
     }
     
     return (uint8_t)(sum / FILTER_WINDOW_SIZE);
+}
+
+// 保存阈值到Flash
+void save_thresholds_to_flash(void)
+{
+    FLASH_EraseInitTypeDef erase_init;
+    uint32_t page_error = 0;
+    
+    // 解锁Flash
+    HAL_FLASH_Unlock();
+    
+    // 配置擦除参数
+    erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
+    erase_init.PageAddress = FLASH_THRESHOLD_ADDR;
+    erase_init.NbPages = 1;
+    
+    // 擦除Flash页
+    if (HAL_FLASHEx_Erase(&erase_init, &page_error) == HAL_OK) {
+        // 准备阈值数据
+        ThresholdData_t threshold_data;
+        threshold_data.magic = FLASH_MAGIC_NUMBER;
+        threshold_data.temp_threshold = temp_threshold;
+        threshold_data.humi_threshold = humi_threshold;
+        threshold_data.reserved[0] = 0;
+        threshold_data.reserved[1] = 0;
+        
+        // 写入Flash
+        uint32_t *data_ptr = (uint32_t*)&threshold_data;
+        for (uint8_t i = 0; i < sizeof(ThresholdData_t) / 4; i++) {
+            HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_THRESHOLD_ADDR + i * 4, data_ptr[i]);
+        }
+    }
+    
+    // 锁定Flash
+    HAL_FLASH_Lock();
+}
+
+// 从Flash读取阈值
+void load_thresholds_from_flash(void)
+{
+    ThresholdData_t *threshold_data = (ThresholdData_t*)FLASH_THRESHOLD_ADDR;
+    
+    // 检查魔数是否有效
+    if (threshold_data->magic == FLASH_MAGIC_NUMBER) {
+        temp_threshold = threshold_data->temp_threshold;
+        humi_threshold = threshold_data->humi_threshold;
+    }
 }
 
 /* USER CODE END 4 */
