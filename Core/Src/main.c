@@ -218,6 +218,19 @@ int main(void)
     temperature_data[data_index] = avg_temperature;
     data_index = (data_index + 1) % MAX_DATA_POINTS;
     
+    // 在平均值界面控制蜂鸣器
+    if (current_screen == 2) {
+        // 平均值界面：温度或湿度平均值超过阈值，拉低BEEP工作（蜂鸣），否则拉高BEEP（静音）
+        if (avg_temperature > temp_threshold || avg_humidity > humi_threshold) {
+            HAL_GPIO_WritePin(BEEP_GPIO_Port, BEEP_Pin, GPIO_PIN_RESET); // 拉低，蜂鸣器工作
+        } else {
+            HAL_GPIO_WritePin(BEEP_GPIO_Port, BEEP_Pin, GPIO_PIN_SET);   // 拉高，蜂鸣器静音
+        }
+    } else {
+        // 其他界面：蜂鸣器静音
+        HAL_GPIO_WritePin(BEEP_GPIO_Port, BEEP_Pin, GPIO_PIN_SET);
+    }
+    
     // 显示数据到OLED
     OLED_Clear();
     
