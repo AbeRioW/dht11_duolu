@@ -45,12 +45,15 @@ uint8_t DHT11_ReadByte(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
     return byte;
 }
 
-// 改进的DHT11读取数据函数（带重试机制）
+// 改进的DHT11读取数据函数（带重试机制和中断保护）
 uint8_t DHT11_ReadData(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, DHT11_Data* data)
 {
     uint8_t retries = DHT11_MAX_RETRIES;
     
     while (retries > 0) {
+        // 禁用中断以保护DHT11精确时序
+        __disable_irq();
+        
         // 1. 发送开始信号
         GPIO_InitTypeDef GPIO_InitStruct = {0};
         GPIO_InitStruct.Pin = GPIO_Pin;
@@ -103,9 +106,13 @@ uint8_t DHT11_ReadData(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, DHT11_Data* data)
         if (buf[0] + buf[1] + buf[2] + buf[3] == buf[4]) {
             data->humidity = buf[0];
             data->temperature = buf[2];
+            // 重新启用中断
+            __enable_irq();
             return 0; // 读取成功
         }
         
+        // 重新启用中断
+        __enable_irq();
         retries--;
     }
     

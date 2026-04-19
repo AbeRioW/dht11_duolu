@@ -22,6 +22,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "esp8266.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,7 +56,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-
+extern DMA_HandleTypeDef hdma_usart1_rx;
+extern DMA_HandleTypeDef hdma_usart1_tx;
+extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 extern uint8_t current_screen; // 外部声明界面切换变量
 extern uint8_t temp_threshold; // 外部声明温度阈值
@@ -203,6 +206,64 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles DMA1 channel4 global interrupt.
+  */
+void DMA1_Channel4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel4_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 channel5 global interrupt.
+  */
+void DMA1_Channel5_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel5_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel5_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+  /* USER CODE BEGIN DMA1_Channel5_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART1 global interrupt.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+  if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
+  {
+      __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+
+      // ? DMA ???????????
+      HAL_UART_DMAStop(&huart1);
+
+      // ?????????????????????? ESP8266_BUF_SIZE-1???????? Receive_DMA ??????????
+      uint16_t received = (uint16_t)((ESP8266_BUF_SIZE - 1) - __HAL_DMA_GET_COUNTER(huart1.hdmarx));
+      if (received > (ESP8266_BUF_SIZE - 1)) received = (ESP8266_BUF_SIZE - 1);
+
+      esp8266_cnt = received;
+      esp8266_buf[received] = '\0';
+
+      // ???????? DMA ???????
+      HAL_UART_Receive_DMA(&huart1, (uint8_t*)esp8266_buf, ESP8266_BUF_SIZE - 1);
+  }
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
   * @brief This function handles EXTI line[15:10] interrupts.
   */
 void EXTI15_10_IRQHandler(void)
@@ -219,6 +280,22 @@ void EXTI15_10_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	    if (huart == &huart1)
+    {
+        // 计算实际接收到的字节数
+        esp8266_cnt = ESP8266_BUF_SIZE - 1 - huart->RxXferCount;
+        if (esp8266_cnt > 0) {
+            esp8266_buf[esp8266_cnt] = '\0';
+        }
+        // 重新启动 DMA 接收
+        HAL_UART_Receive_DMA(&huart1, (uint8_t*)esp8266_buf, ESP8266_BUF_SIZE - 1);
+    }
+}
+
+
 
 /**
   * @brief  EXTI line detection callbacks
