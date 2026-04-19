@@ -44,18 +44,28 @@
 /* Private variables ---------------------------------------------------------
 
 /* USER CODE BEGIN PV */
-uint8_t current_screen = 1; // 界面切换变量，1表示界面1，2表示界面2，3表示界面3
+uint8_t current_screen = 1; // 界面切换变量，1表示界面1（主界面），2表示界面2（平均值界面）
 
 // 数据采集和存储
 #define MAX_DATA_POINTS 128 // 最大数据点数量
 uint8_t humidity_data[MAX_DATA_POINTS]; // 湿度数据
 uint8_t temperature_data[MAX_DATA_POINTS]; // 温度数据
 uint16_t data_index = 0; // 当前数据点索引
+
+// 数据滤波相关变量
+#define FILTER_WINDOW_SIZE 5 // 滤波窗口大小
+uint8_t humidity_filter_buf[FILTER_WINDOW_SIZE][4]; // 4个传感器的湿度滤波缓冲区
+uint8_t temperature_filter_buf[FILTER_WINDOW_SIZE][4]; // 4个传感器的温度滤波缓冲区
+uint8_t filter_index = 0; // 滤波缓冲区索引
+uint8_t filter_ready = 0; // 滤波是否就绪标志
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+// 数据滤波函数
+uint8_t moving_average_filter(uint8_t* buffer, uint8_t sensor_index, uint8_t new_value);
 
 /* USER CODE END PFP */
 
@@ -96,7 +106,19 @@ int main(void)
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_Clear();
+  
+  // 显示欢迎界面2秒
+  OLED_ShowString(20, 0, (uint8_t*)"Welcome", 16, 1);
+  OLED_ShowString(10, 20, (uint8_t*)"DHT11 System", 16, 1);
   OLED_Refresh();
+  
+  // 延时2秒
+  HAL_Delay(2000);
+  
+  // 清屏并进入主循环
+  OLED_Clear();
+  OLED_Refresh();
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,6 +129,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     DHT11_Data data1, data2, data3, data4;
+    DHT11_Data filtered_data1, filtered_data2, filtered_data3, filtered_data4;
     
     // 读取四个DHT11的温湿度数据
     DHT11_ReadData(DHT11_1_PORT, DHT11_1_PIN, &data1);
@@ -114,9 +137,28 @@ int main(void)
     DHT11_ReadData(DHT11_3_PORT, DHT11_3_PIN, &data3);
     DHT11_ReadData(DHT11_4_PORT, DHT11_4_PIN, &data4);
     
-    // 计算平均值
-    uint8_t avg_humidity = (data1.humidity + data2.humidity + data3.humidity + data4.humidity) / 4;
-    uint8_t avg_temperature = (data1.temperature + data2.temperature + data3.temperature + data4.temperature) / 4;
+    // 应用数据滤波
+    filtered_data1.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 0, data1.humidity);
+    filtered_data1.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 0, data1.temperature);
+    
+    filtered_data2.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 1, data2.humidity);
+    filtered_data2.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 1, data2.temperature);
+    
+    filtered_data3.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 2, data3.humidity);
+    filtered_data3.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 2, data3.temperature);
+    
+    filtered_data4.humidity = moving_average_filter((uint8_t*)humidity_filter_buf, 3, data4.humidity);
+    filtered_data4.temperature = moving_average_filter((uint8_t*)temperature_filter_buf, 3, data4.temperature);
+    
+    // 更新滤波索引
+    filter_index = (filter_index + 1) % FILTER_WINDOW_SIZE;
+    if (filter_index == 0) {
+        filter_ready = 1; // 滤波缓冲区已填满
+    }
+    
+    // 计算平均值（使用滤波后的数据）
+    uint8_t avg_humidity = (filtered_data1.humidity + filtered_data2.humidity + filtered_data3.humidity + filtered_data4.humidity) / 4;
+    uint8_t avg_temperature = (filtered_data1.temperature + filtered_data2.temperature + filtered_data3.temperature + filtered_data4.temperature) / 4;
     
     // 存储数据
     humidity_data[data_index] = avg_humidity;
@@ -128,40 +170,40 @@ int main(void)
     
     if (current_screen == 1) {
       // 界面1：显示四个DHT11的原始数据
-      // 显示DHT11_1的数据
+      // 显示DHT11_1的数据（使用滤波后的数据）
       OLED_ShowString(0, 0, (uint8_t*)"DHT11_1:", 8, 1);
       OLED_ShowString(56, 0, (uint8_t*)"H:", 8, 1);
-      OLED_ShowNum(64, 0, data1.humidity, 2, 8, 1);
+      OLED_ShowNum(64, 0, filtered_data1.humidity, 2, 8, 1);
       OLED_ShowString(80, 0, (uint8_t*)"%", 8, 1);
       OLED_ShowString(88, 0, (uint8_t*)"T:", 8, 1);
-      OLED_ShowNum(96, 0, data1.temperature, 2, 8, 1);
+      OLED_ShowNum(96, 0, filtered_data1.temperature, 2, 8, 1);
       OLED_ShowString(112, 0, (uint8_t*)"C", 8, 1);
       
-      // 显示DHT11_2的数据
+      // 显示DHT11_2的数据（使用滤波后的数据）
       OLED_ShowString(0, 16, (uint8_t*)"DHT11_2:", 8, 1);
       OLED_ShowString(56, 16, (uint8_t*)"H:", 8, 1);
-      OLED_ShowNum(64, 16, data2.humidity, 2, 8, 1);
+      OLED_ShowNum(64, 16, filtered_data2.humidity, 2, 8, 1);
       OLED_ShowString(80, 16, (uint8_t*)"%", 8, 1);
       OLED_ShowString(88, 16, (uint8_t*)"T:", 8, 1);
-      OLED_ShowNum(96, 16, data2.temperature, 2, 8, 1);
+      OLED_ShowNum(96, 16, filtered_data2.temperature, 2, 8, 1);
       OLED_ShowString(112, 16, (uint8_t*)"C", 8, 1);
       
-      // 显示DHT11_3的数据
+      // 显示DHT11_3的数据（使用滤波后的数据）
       OLED_ShowString(0, 32, (uint8_t*)"DHT11_3:", 8, 1);
       OLED_ShowString(56, 32, (uint8_t*)"H:", 8, 1);
-      OLED_ShowNum(64, 32, data3.humidity, 2, 8, 1);
+      OLED_ShowNum(64, 32, filtered_data3.humidity, 2, 8, 1);
       OLED_ShowString(80, 32, (uint8_t*)"%", 8, 1);
       OLED_ShowString(88, 32, (uint8_t*)"T:", 8, 1);
-      OLED_ShowNum(96, 32, data3.temperature, 2, 8, 1);
+      OLED_ShowNum(96, 32, filtered_data3.temperature, 2, 8, 1);
       OLED_ShowString(112, 32, (uint8_t*)"C", 8, 1);
       
-      // 显示DHT11_4的数据
+      // 显示DHT11_4的数据（使用滤波后的数据）
       OLED_ShowString(0, 48, (uint8_t*)"DHT11_4:", 8, 1);
       OLED_ShowString(56, 48, (uint8_t*)"H:", 8, 1);
-      OLED_ShowNum(64, 48, data4.humidity, 2, 8, 1);
+      OLED_ShowNum(64, 48, filtered_data4.humidity, 2, 8, 1);
       OLED_ShowString(80, 48, (uint8_t*)"%", 8, 1);
       OLED_ShowString(88, 48, (uint8_t*)"T:", 8, 1);
-      OLED_ShowNum(96, 48, data4.temperature, 2, 8, 1);
+      OLED_ShowNum(96, 48, filtered_data4.temperature, 2, 8, 1);
       OLED_ShowString(112, 48, (uint8_t*)"C", 8, 1);
     } else if (current_screen == 2) {
       // 界面2：显示DHT11的温湿度平均值
@@ -172,37 +214,6 @@ int main(void)
       OLED_ShowString(0, 48, (uint8_t*)"Temperature:", 8, 1);
       OLED_ShowNum(80, 48, avg_temperature, 2, 8, 1);
       OLED_ShowString(96, 48, (uint8_t*)"C", 8, 1);
-    } else if (current_screen == 3) {
-      // 界面3：显示平均值的走势图
-      OLED_ShowString(0, 0, (uint8_t*)"Trend Chart:", 8, 1);
-      
-      // 绘制湿度走势图
-      OLED_ShowString(0, 16, (uint8_t*)"Humidity:", 8, 1);
-      for (uint16_t i = 0; i < MAX_DATA_POINTS; i++) {
-        uint16_t x = i * 128 / MAX_DATA_POINTS;
-        uint16_t y = 32 - (humidity_data[(data_index + i) % MAX_DATA_POINTS] * 16 / 100);
-        if (i == 0) {
-          OLED_DrawPoint(x, y, 1);
-        } else {
-          uint16_t x_prev = (i - 1) * 128 / MAX_DATA_POINTS;
-          uint16_t y_prev = 32 - (humidity_data[(data_index + i - 1) % MAX_DATA_POINTS] * 16 / 100);
-          OLED_DrawLine(x_prev, y_prev, x, y, 1);
-        }
-      }
-      
-      // 绘制温度走势图
-      OLED_ShowString(0, 40, (uint8_t*)"Temperature:", 8, 1);
-      for (uint16_t i = 0; i < MAX_DATA_POINTS; i++) {
-        uint16_t x = i * 128 / MAX_DATA_POINTS;
-        uint16_t y = 56 - (temperature_data[(data_index + i) % MAX_DATA_POINTS] * 16 / 50);
-        if (i == 0) {
-          OLED_DrawPoint(x, y, 1);
-        } else {
-          uint16_t x_prev = (i - 1) * 128 / MAX_DATA_POINTS;
-          uint16_t y_prev = 56 - (temperature_data[(data_index + i - 1) % MAX_DATA_POINTS] * 16 / 50);
-          OLED_DrawLine(x_prev, y_prev, x, y, 1);
-        }
-      }
     }
     
     OLED_Refresh();
@@ -251,6 +262,22 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+// 移动平均滤波函数
+uint8_t moving_average_filter(uint8_t* buffer, uint8_t sensor_index, uint8_t new_value)
+{
+    uint16_t sum = 0;
+    
+    // 更新滤波缓冲区
+    buffer[filter_index * 4 + sensor_index] = new_value;
+    
+    // 计算平均值
+    for (uint8_t i = 0; i < FILTER_WINDOW_SIZE; i++) {
+        sum += buffer[i * 4 + sensor_index];
+    }
+    
+    return (uint8_t)(sum / FILTER_WINDOW_SIZE);
+}
 
 /* USER CODE END 4 */
 

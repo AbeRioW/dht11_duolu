@@ -224,15 +224,18 @@ void EXTI15_10_IRQHandler(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == KEY1_Pin) {
-    // KEY1下降沿中断，显示平均值（界面2）
-    current_screen = 2;
-  } else if (GPIO_Pin == KEY2_Pin) {
-    // KEY2下降沿中断，显示平均值的走势图（界面3）
-    current_screen = 3;
-  } else if (GPIO_Pin == KEY3_Pin) {
-    // KEY3下降沿中断，返回主页面（界面1）
-    current_screen = 1;
+    // KEY1下降沿中断，在平均值界面（界面2）和主界面（界面1）之间切换
+    // 欢迎界面（界面0）时不进行切换
+    if (current_screen == 1) {
+      // 当前在主界面，切换到平均值界面
+      current_screen = 2;
+    } else if (current_screen == 2) {
+      // 当前在平均值界面，切换回主界面
+      current_screen = 1;
+    }
+    // 其他界面（包括欢迎界面）保持不变
   }
+  // KEY2和KEY3不进行界面切换，保持原有功能
 }
 
 /* USER CODE END 1 */
